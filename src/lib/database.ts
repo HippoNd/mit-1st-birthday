@@ -1,5 +1,6 @@
 import { Low } from 'lowdb'
 import { JSONFile } from 'lowdb/node'
+import { Memory } from 'lowdb'
 import { join } from 'path'
 
 // Define the data structure
@@ -24,31 +25,66 @@ export interface DatabaseSchema {
   rsvps: RSVPData[]
 }
 
-// Database file path
-const file = join(process.cwd(), 'data', 'db.json')
+// Check if we're in Vercel environment
+const isVercel = process.env.VERCEL === '1'
 
-// Initialize database
-const adapter = new JSONFile<DatabaseSchema>(file)
+// Database configuration
 const defaultData: DatabaseSchema = { guests: [], rsvps: [] }
-const db = new Low(adapter, defaultData)
+let db: Low<DatabaseSchema>
+
+// Initialize database based on environment
+if (isVercel) {
+  // Use in-memory database for Vercel
+  const adapter = new Memory<DatabaseSchema>()
+  db = new Low(adapter, defaultData)
+} else {
+  // Use file-based database for local development
+  const file = join(process.cwd(), 'data', 'db.json')
+  const adapter = new JSONFile<DatabaseSchema>(file)
+  db = new Low(adapter, defaultData)
+}
 
 // Initialize database
 export const initDatabase = async (): Promise<void> => {
-  await db.read()
+  if (isVercel) {
+    // For Vercel, just ensure data is initialized
+    if (!db.data) {
+      db.data = defaultData
+    }
+  } else {
+    // For local development, read from file
+    await db.read()
+    if (!db.data) {
+      db.data = defaultData
+      await db.write()
+    }
+  }
+}
+
+// Helper function to handle database operations
+const ensureData = async (): Promise<void> => {
+  if (!isVercel) {
+    await db.read()
+  }
   if (!db.data) {
     db.data = defaultData
+  }
+}
+
+const saveData = async (): Promise<void> => {
+  if (!isVercel) {
     await db.write()
   }
 }
 
 // Guest Management Functions
 export const getAllGuests = async (): Promise<GuestInvitation[]> => {
-  await db.read()
+  await ensureData()
   return db.data?.guests || []
 }
 
 export const addGuest = async (name: string): Promise<GuestInvitation> => {
-  await db.read()
+  await ensureData()
   
   const inviteCode = Math.random().toString(36).substr(2, 8).toUpperCase()
   
@@ -65,29 +101,61 @@ export const addGuest = async (name: string): Promise<GuestInvitation> => {
   }
   
   db.data.guests.push(newGuest)
-  await db.write()
+  await saveData()
   
   return newGuest
 }
 
 export const getGuestByInviteCode = async (inviteCode: string): Promise<GuestInvitation | null> => {
-  await db.read()
+  await ensureData()
   return db.data?.guests.find(guest => guest.inviteCode === inviteCode) || null
 }
 
 export const getGuestById = async (id: string): Promise<GuestInvitation | null> => {
-  await db.read()
+  await ensureData()
   return db.data?.guests.find(guest => guest.id === id) || null
+}
+
+export const deleteGuest = async (id: string): Promise<boolean> => {
+  await ensureData()
+  
+  if (!db.data) {
+    return false
+  }
+  
+  const guestIndex = db.data.guests.findIndex(guest => guest.id === id)
+  if (guestIndex === -1) {
+    return false
+  }
+  
+  // Also delete associated RSVPs
+  db.data.rsvps = db.data.rsvps.filter(rsvp => rsvp.guestId !== id)
+  
+  // Delete the guest
+  db.data.guests.splice(guestIndex, 1)
+  await saveData()
+  
+  return true
+}
+
+export const clearDatabase = async (): Promise<void> => {
+  if (!db.data) {
+    db.data = defaultData
+  } else {
+    db.data.guests = []
+    db.data.rsvps = []
+  }
+  await saveData()
 }
 
 // RSVP Functions
 export const getAllRSVPs = async (): Promise<RSVPData[]> => {
-  await db.read()
+  await ensureData()
   return db.data?.rsvps || []
 }
 
 export const addRSVP = async (guestId: string, isAttending: boolean): Promise<RSVPData> => {
-  await db.read()
+  await ensureData()
   
   const guest = await getGuestById(guestId)
   if (!guest) {
@@ -107,20 +175,20 @@ export const addRSVP = async (guestId: string, isAttending: boolean): Promise<RS
   }
   
   db.data.rsvps.push(newRSVP)
-  await db.write()
+  await saveData()
   
   return newRSVP
 }
 
 // Get RSVP by ID
 export const getRSVPById = async (id: string): Promise<RSVPData | null> => {
-  await db.read()
+  await ensureData()
   return db.data?.rsvps.find(rsvp => rsvp.id === id) || null
 }
 
 // Update RSVP
 export const updateRSVP = async (id: string, updates: Partial<Omit<RSVPData, 'id' | 'submittedAt'>>): Promise<RSVPData | null> => {
-  await db.read()
+  await ensureData()
   
   if (!db.data) {
     return null
@@ -137,14 +205,14 @@ export const updateRSVP = async (id: string, updates: Partial<Omit<RSVPData, 'id
   }
   
   db.data.rsvps[rsvpIndex] = updatedRSVP
-  await db.write()
+  await saveData()
   
   return updatedRSVP
 }
 
 // Delete RSVP
 export const deleteRSVP = async (id: string): Promise<boolean> => {
-  await db.read()
+  await ensureData()
   
   if (!db.data) {
     return false
@@ -156,14 +224,14 @@ export const deleteRSVP = async (id: string): Promise<boolean> => {
   }
   
   db.data.rsvps.splice(rsvpIndex, 1)
-  await db.write()
+  await saveData()
   
   return true
 }
 
 // Get RSVP statistics
 export const getRSVPStats = async () => {
-  await db.read()
+  await ensureData()
   
   if (!db.data) {
     return {

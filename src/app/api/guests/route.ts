@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { initDatabase, getAllGuests, addGuest } from '@/lib/database'
+import { initDatabase, getAllGuests, addGuest, clearDatabase } from '@/lib/database'
 
 // Initialize database on first import
 initDatabase()
@@ -39,6 +39,20 @@ export async function POST(request: NextRequest) {
     console.error('Error creating guest:', error)
     return NextResponse.json(
       { error: 'Failed to create guest invitation' },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Clear all guests and RSVPs
+export async function DELETE() {
+  try {
+    await clearDatabase()
+    return NextResponse.json({ message: 'Database cleared successfully' })
+  } catch (error) {
+    console.error('Error clearing database:', error)
+    return NextResponse.json(
+      { error: 'Failed to clear database' },
       { status: 500 }
     )
   }
