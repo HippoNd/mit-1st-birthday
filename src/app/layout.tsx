@@ -5,8 +5,8 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Sophia's 1st Birthday Party",
-  description: "Join us in celebrating Sophia's first birthday!",
+  title: "Mit's 1st Birthday Party",
+  description: "Join us in celebrating Mit's first birthday!",
   generator: "v0.app",
 }
 

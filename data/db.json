@@ -1,0 +1,55 @@
+{
+  "guests": [
+    {
+      "id": "176047309253077vcea9pl",
+      "name": "Nguyễn Hoàng Đạt",
+      "inviteCode": "WMNCVZU5",
+      "isInvited": true,
+      "createdAt": "2025-10-14T20:18:12.530Z"
+    },
+    {
+      "id": "1760473643650f9cdmlujj",
+      "name": "Minh",
+      "inviteCode": "FN7CXNDV",
+      "isInvited": true,
+      "createdAt": "2025-10-14T20:27:23.650Z"
+    },
+    {
+      "id": "1760474053803ksg46bot9",
+      "name": "hihihihi",
+      "inviteCode": "ORUCKX3R",
+      "isInvited": true,
+      "createdAt": "2025-10-14T20:34:13.803Z"
+    },
+    {
+      "id": "1760474182942kh4949ozq",
+      "name": "huhuhu",
+      "inviteCode": "X96BS6UH",
+      "isInvited": true,
+      "createdAt": "2025-10-14T20:36:22.942Z"
+    }
+  ],
+  "rsvps": [
+    {
+      "id": "1760473114991pf0wfqdv7",
+      "guestId": "176047309253077vcea9pl",
+      "guestName": "Nguyễn Hoàng Đạt",
+      "isAttending": true,
+      "submittedAt": "2025-10-14T20:18:34.991Z"
+    },
+    {
+      "id": "17604737938066bkpc7mb4",
+      "guestId": "1760473643650f9cdmlujj",
+      "guestName": "Minh",
+      "isAttending": false,
+      "submittedAt": "2025-10-14T20:29:53.806Z"
+    },
+    {
+      "id": "1760474156228zb9zidz4a",
+      "guestId": "1760474053803ksg46bot9",
+      "guestName": "hihihihi",
+      "isAttending": true,
+      "submittedAt": "2025-10-14T20:35:56.228Z"
+    }
+  ]
+}
