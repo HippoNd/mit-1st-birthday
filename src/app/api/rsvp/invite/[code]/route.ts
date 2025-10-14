@@ -4,10 +4,10 @@ import { getGuestByInviteCode, addRSVP, getAllRSVPs } from '@/lib/database'
 // GET - Get guest info by invite code
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const { code } = params
+    const { code } = await params
     
     if (!code) {
       return NextResponse.json(
@@ -50,10 +50,10 @@ export async function GET(
 // POST - Submit RSVP for guest
 export async function POST(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const { code } = params
+    const { code } = await params
     const body = await request.json()
     const { isAttending } = body
     

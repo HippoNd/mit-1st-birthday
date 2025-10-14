@@ -4,10 +4,10 @@ import { getRSVPById, updateRSVP, deleteRSVP } from '@/lib/database'
 // GET - Retrieve specific RSVP by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     if (!id) {
       return NextResponse.json(
@@ -38,12 +38,12 @@ export async function GET(
 // PUT - Update specific RSVP by ID
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
-    const { name, adults, children } = body
+    const { isAttending } = body
     
     if (!id) {
       return NextResponse.json(
@@ -55,14 +55,14 @@ export async function PUT(
     // Validate data if provided
     const updates: any = {}
     
-    if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length === 0) {
+    if (isAttending !== undefined) {
+      if (typeof isAttending !== 'boolean') {
         return NextResponse.json(
-          { error: 'Name must be a non-empty string' },
+          { error: 'isAttending must be a boolean' },
           { status: 400 }
         )
       }
-      updates.name = name.trim()
+      updates.isAttending = isAttending
     }
   
     const updatedRSVP = await updateRSVP(id, updates)
@@ -87,10 +87,10 @@ export async function PUT(
 // DELETE - Delete specific RSVP by ID
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     
     if (!id) {
       return NextResponse.json(
