@@ -1,4 +1,4 @@
-// Vercel KV Database Layer
+// Redis Database Layer
 // This works on both local development and Vercel production
 
 // Define the data structure
@@ -23,14 +23,15 @@ export interface DatabaseSchema {
   rsvps: RSVPData[]
 }
 
-// Check if we're in Vercel environment
-const isVercel = process.env.VERCEL === '1'
+// Check if we have Redis URL (for production)
+const hasRedisUrl = !!process.env.REDIS_URL
 
 // For local development, we'll use a simple in-memory store
-// For Vercel, we'll use Vercel KV
+// For production, we'll use Redis
 // Use a global variable to persist data across requests in local development
 declare global {
   var __localStore: DatabaseSchema | undefined
+  var __redisClient: any | undefined
 }
 
 const getLocalStore = (): DatabaseSchema => {
@@ -40,30 +41,36 @@ const getLocalStore = (): DatabaseSchema => {
   return global.__localStore
 }
 
-// Vercel KV functions (will be used in production)
-const getKVClient = async () => {
-  if (isVercel) {
-    try {
-      const { kv } = await import('@vercel/kv')
-      return kv
-    } catch (error) {
-      console.error('Failed to import Vercel KV:', error)
-      return null
+// Redis client functions (will be used in production)
+const getRedisClient = async () => {
+  if (hasRedisUrl && process.env.REDIS_URL) {
+    if (!global.__redisClient) {
+      try {
+        // Dynamic import to avoid issues in local development
+        const { createClient } = await import('redis')
+        global.__redisClient = createClient({ url: process.env.REDIS_URL })
+        await global.__redisClient.connect()
+        console.log('Connected to Redis')
+      } catch (error) {
+        console.error('Failed to connect to Redis:', error)
+        return null
+      }
     }
+    return global.__redisClient
   }
   return null
 }
 
 // Helper functions for data operations
 const getData = async (): Promise<DatabaseSchema> => {
-  if (isVercel) {
-    const kv = await getKVClient()
-    if (kv) {
+  if (hasRedisUrl && process.env.REDIS_URL) {
+    const redis = await getRedisClient()
+    if (redis) {
       try {
-        const data = await kv.get<DatabaseSchema>('rsvp-database')
-        return data || { guests: [], rsvps: [] }
+        const data = await redis.get('rsvp-database')
+        return data ? JSON.parse(data) : { guests: [], rsvps: [] }
       } catch (error) {
-        console.error('Failed to get data from KV:', error)
+        console.error('Failed to get data from Redis:', error)
         return { guests: [], rsvps: [] }
       }
     }
@@ -72,14 +79,14 @@ const getData = async (): Promise<DatabaseSchema> => {
 }
 
 const setData = async (data: DatabaseSchema): Promise<void> => {
-  if (isVercel) {
-    const kv = await getKVClient()
-    if (kv) {
+  if (hasRedisUrl && process.env.REDIS_URL) {
+    const redis = await getRedisClient()
+    if (redis) {
       try {
-        await kv.set('rsvp-database', data)
+        await redis.set('rsvp-database', JSON.stringify(data))
         return
       } catch (error) {
-        console.error('Failed to set data in KV:', error)
+        console.error('Failed to set data in Redis:', error)
         throw error
       }
     }
@@ -89,9 +96,9 @@ const setData = async (data: DatabaseSchema): Promise<void> => {
 
 // Initialize database
 export const initDatabase = async (): Promise<void> => {
-  // For Vercel KV, we don't need to initialize anything
+  // For Redis, we don't need to initialize anything
   // For local development, we already have the default data
-  console.log('Database initialized for', isVercel ? 'Vercel KV' : 'local development')
+  console.log('Database initialized for', hasRedisUrl ? 'Redis' : 'local development')
 }
 
 // Guest Management Functions
