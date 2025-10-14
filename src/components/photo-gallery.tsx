@@ -30,15 +30,15 @@ export default function PhotoGallery() {
       alt: "Baby with birthday cake",
     },
     {
-      src: "/mit-phun-mua.mp4",
+      src: "/mit-an-dam.mp4",
       alt: "Baby playing with balloons",
     },
     {
-      src: "/mit-phun-mua.mp4",
+      src: "/mit-nghich-remote.mp4",
       alt: "Baby in party dress",
     },
     {
-      src: "/mit-phun-mua.mp4",
+      src: "/mit-chu-mo.mp4",
       alt: "Baby with presents",
     },
   ]
@@ -66,7 +66,7 @@ export default function PhotoGallery() {
               style={{ transitionDelay: `${index * 150}ms` }}
             >
               <div className="relative aspect-auto rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow transform duration-300 border-4 border-white">
-                <video src={photo.src || "/placeholder.svg"} autoPlay muted loop className="" />
+                <video playsInline src={photo.src || "/placeholder.svg"} autoPlay muted loop />
               </div>
             </div>
           ))}

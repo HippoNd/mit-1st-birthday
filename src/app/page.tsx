@@ -1,7 +1,7 @@
 import HeroSection from "@/components/hero-section"
 import EventDetails from "@/components/event-details"
 import PhotoGallery from "@/components/photo-gallery"
-import RSVPForm from "@/components/rsvp-form"
+import SmartRSVP from "@/components/smart-rsvp"
 
 export default function Home() {
   return (
@@ -9,7 +9,7 @@ export default function Home() {
       <HeroSection />
       <EventDetails />
       <PhotoGallery />
-      <RSVPForm />
+      <SmartRSVP />
     </main>
   )
 }
