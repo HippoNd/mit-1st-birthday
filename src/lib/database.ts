@@ -1,7 +1,5 @@
-import { Low } from 'lowdb'
-import { JSONFile } from 'lowdb/node'
-import { Memory } from 'lowdb'
-import { join } from 'path'
+// Vercel KV Database Layer
+// This works on both local development and Vercel production
 
 // Define the data structure
 export interface GuestInvitation {
@@ -28,63 +26,82 @@ export interface DatabaseSchema {
 // Check if we're in Vercel environment
 const isVercel = process.env.VERCEL === '1'
 
-// Database configuration
-const defaultData: DatabaseSchema = { guests: [], rsvps: [] }
-let db: Low<DatabaseSchema>
+// For local development, we'll use a simple in-memory store
+// For Vercel, we'll use Vercel KV
+// Use a global variable to persist data across requests in local development
+declare global {
+  var __localStore: DatabaseSchema | undefined
+}
 
-// Initialize database based on environment
-if (isVercel) {
-  // Use in-memory database for Vercel
-  const adapter = new Memory<DatabaseSchema>()
-  db = new Low(adapter, defaultData)
-} else {
-  // Use file-based database for local development
-  const file = join(process.cwd(), 'data', 'db.json')
-  const adapter = new JSONFile<DatabaseSchema>(file)
-  db = new Low(adapter, defaultData)
+const getLocalStore = (): DatabaseSchema => {
+  if (!global.__localStore) {
+    global.__localStore = { guests: [], rsvps: [] }
+  }
+  return global.__localStore
+}
+
+// Vercel KV functions (will be used in production)
+const getKVClient = async () => {
+  if (isVercel) {
+    try {
+      const { kv } = await import('@vercel/kv')
+      return kv
+    } catch (error) {
+      console.error('Failed to import Vercel KV:', error)
+      return null
+    }
+  }
+  return null
+}
+
+// Helper functions for data operations
+const getData = async (): Promise<DatabaseSchema> => {
+  if (isVercel) {
+    const kv = await getKVClient()
+    if (kv) {
+      try {
+        const data = await kv.get<DatabaseSchema>('rsvp-database')
+        return data || { guests: [], rsvps: [] }
+      } catch (error) {
+        console.error('Failed to get data from KV:', error)
+        return { guests: [], rsvps: [] }
+      }
+    }
+  }
+  return getLocalStore()
+}
+
+const setData = async (data: DatabaseSchema): Promise<void> => {
+  if (isVercel) {
+    const kv = await getKVClient()
+    if (kv) {
+      try {
+        await kv.set('rsvp-database', data)
+        return
+      } catch (error) {
+        console.error('Failed to set data in KV:', error)
+        throw error
+      }
+    }
+  }
+  global.__localStore = data
 }
 
 // Initialize database
 export const initDatabase = async (): Promise<void> => {
-  if (isVercel) {
-    // For Vercel, just ensure data is initialized
-    if (!db.data) {
-      db.data = defaultData
-    }
-  } else {
-    // For local development, read from file
-    await db.read()
-    if (!db.data) {
-      db.data = defaultData
-      await db.write()
-    }
-  }
-}
-
-// Helper function to handle database operations
-const ensureData = async (): Promise<void> => {
-  if (!isVercel) {
-    await db.read()
-  }
-  if (!db.data) {
-    db.data = defaultData
-  }
-}
-
-const saveData = async (): Promise<void> => {
-  if (!isVercel) {
-    await db.write()
-  }
+  // For Vercel KV, we don't need to initialize anything
+  // For local development, we already have the default data
+  console.log('Database initialized for', isVercel ? 'Vercel KV' : 'local development')
 }
 
 // Guest Management Functions
 export const getAllGuests = async (): Promise<GuestInvitation[]> => {
-  await ensureData()
-  return db.data?.guests || []
+  const data = await getData()
+  return data.guests || []
 }
 
 export const addGuest = async (name: string): Promise<GuestInvitation> => {
-  await ensureData()
+  const data = await getData()
   
   const inviteCode = Math.random().toString(36).substr(2, 8).toUpperCase()
   
@@ -96,66 +113,53 @@ export const addGuest = async (name: string): Promise<GuestInvitation> => {
     createdAt: new Date().toISOString()
   }
   
-  if (!db.data) {
-    db.data = defaultData
-  }
-  
-  db.data.guests.push(newGuest)
-  await saveData()
+  data.guests.push(newGuest)
+  await setData(data)
   
   return newGuest
 }
 
 export const getGuestByInviteCode = async (inviteCode: string): Promise<GuestInvitation | null> => {
-  await ensureData()
-  return db.data?.guests.find(guest => guest.inviteCode === inviteCode) || null
+  const data = await getData()
+  return data.guests.find(guest => guest.inviteCode === inviteCode) || null
 }
 
 export const getGuestById = async (id: string): Promise<GuestInvitation | null> => {
-  await ensureData()
-  return db.data?.guests.find(guest => guest.id === id) || null
+  const data = await getData()
+  return data.guests.find(guest => guest.id === id) || null
 }
 
 export const deleteGuest = async (id: string): Promise<boolean> => {
-  await ensureData()
+  const data = await getData()
   
-  if (!db.data) {
-    return false
-  }
-  
-  const guestIndex = db.data.guests.findIndex(guest => guest.id === id)
+  const guestIndex = data.guests.findIndex(guest => guest.id === id)
   if (guestIndex === -1) {
     return false
   }
   
   // Also delete associated RSVPs
-  db.data.rsvps = db.data.rsvps.filter(rsvp => rsvp.guestId !== id)
+  data.rsvps = data.rsvps.filter(rsvp => rsvp.guestId !== id)
   
   // Delete the guest
-  db.data.guests.splice(guestIndex, 1)
-  await saveData()
+  data.guests.splice(guestIndex, 1)
+  await setData(data)
   
   return true
 }
 
 export const clearDatabase = async (): Promise<void> => {
-  if (!db.data) {
-    db.data = defaultData
-  } else {
-    db.data.guests = []
-    db.data.rsvps = []
-  }
-  await saveData()
+  const emptyData: DatabaseSchema = { guests: [], rsvps: [] }
+  await setData(emptyData)
 }
 
 // RSVP Functions
 export const getAllRSVPs = async (): Promise<RSVPData[]> => {
-  await ensureData()
-  return db.data?.rsvps || []
+  const data = await getData()
+  return data.rsvps || []
 }
 
 export const addRSVP = async (guestId: string, isAttending: boolean): Promise<RSVPData> => {
-  await ensureData()
+  const data = await getData()
   
   const guest = await getGuestById(guestId)
   if (!guest) {
@@ -170,83 +174,61 @@ export const addRSVP = async (guestId: string, isAttending: boolean): Promise<RS
     submittedAt: new Date().toISOString()
   }
   
-  if (!db.data) {
-    db.data = defaultData
-  }
-  
-  db.data.rsvps.push(newRSVP)
-  await saveData()
+  data.rsvps.push(newRSVP)
+  await setData(data)
   
   return newRSVP
 }
 
 // Get RSVP by ID
 export const getRSVPById = async (id: string): Promise<RSVPData | null> => {
-  await ensureData()
-  return db.data?.rsvps.find(rsvp => rsvp.id === id) || null
+  const data = await getData()
+  return data.rsvps.find(rsvp => rsvp.id === id) || null
 }
 
 // Update RSVP
 export const updateRSVP = async (id: string, updates: Partial<Omit<RSVPData, 'id' | 'submittedAt'>>): Promise<RSVPData | null> => {
-  await ensureData()
+  const data = await getData()
   
-  if (!db.data) {
-    return null
-  }
-  
-  const rsvpIndex = db.data.rsvps.findIndex(rsvp => rsvp.id === id)
+  const rsvpIndex = data.rsvps.findIndex(rsvp => rsvp.id === id)
   if (rsvpIndex === -1) {
     return null
   }
   
   const updatedRSVP = {
-    ...db.data.rsvps[rsvpIndex],
+    ...data.rsvps[rsvpIndex],
     ...updates
   }
   
-  db.data.rsvps[rsvpIndex] = updatedRSVP
-  await saveData()
+  data.rsvps[rsvpIndex] = updatedRSVP
+  await setData(data)
   
   return updatedRSVP
 }
 
 // Delete RSVP
 export const deleteRSVP = async (id: string): Promise<boolean> => {
-  await ensureData()
+  const data = await getData()
   
-  if (!db.data) {
-    return false
-  }
-  
-  const rsvpIndex = db.data.rsvps.findIndex(rsvp => rsvp.id === id)
+  const rsvpIndex = data.rsvps.findIndex(rsvp => rsvp.id === id)
   if (rsvpIndex === -1) {
     return false
   }
   
-  db.data.rsvps.splice(rsvpIndex, 1)
-  await saveData()
+  data.rsvps.splice(rsvpIndex, 1)
+  await setData(data)
   
   return true
 }
 
 // Get RSVP statistics
 export const getRSVPStats = async () => {
-  await ensureData()
+  const data = await getData()
   
-  if (!db.data) {
-    return {
-      totalGuests: 0,
-      totalRSVPs: 0,
-      attendingCount: 0,
-      notAttendingCount: 0,
-      pendingCount: 0
-    }
-  }
-  
-  const totalGuests = db.data.guests.length
-  const totalRSVPs = db.data.rsvps.length
-  const attendingCount = db.data.rsvps.filter(rsvp => rsvp.isAttending).length
-  const notAttendingCount = db.data.rsvps.filter(rsvp => !rsvp.isAttending).length
+  const totalGuests = data.guests.length
+  const totalRSVPs = data.rsvps.length
+  const attendingCount = data.rsvps.filter(rsvp => rsvp.isAttending).length
+  const notAttendingCount = data.rsvps.filter(rsvp => !rsvp.isAttending).length
   const pendingCount = totalGuests - totalRSVPs
   
   return {
@@ -258,4 +240,4 @@ export const getRSVPStats = async () => {
   }
 }
 
-export default db
+export default { initDatabase, getAllGuests, addGuest, getGuestByInviteCode, getGuestById, deleteGuest, clearDatabase, getAllRSVPs, addRSVP, getRSVPById, updateRSVP, deleteRSVP, getRSVPStats }
