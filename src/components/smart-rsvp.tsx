@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -23,7 +23,7 @@ interface RSVPResponse {
   } | null
 }
 
-export default function SmartRSVP() {
+function SmartRSVPContent() {
   const [isVisible, setIsVisible] = useState(false)
   const [guestData, setGuestData] = useState<RSVPResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -338,5 +338,32 @@ export default function SmartRSVP() {
         </div>
       </div>
     </section>
+  )
+}
+
+export default function SmartRSVP() {
+  return (
+    <Suspense fallback={
+      <section className="py-20 px-4 bg-[#FAF0E6]">
+        <div className="max-w-2xl mx-auto">
+          <h2
+            className="text-5xl md:text-6xl font-bold text-center mb-4 text-[#F8C8DC]"
+            style={{ fontFamily: "var(--font-script)" }}
+          >
+            RSVP
+          </h2>
+          <p className="text-center text-lg text-[#6A6A6A] mb-12">{"We can't wait to celebrate with you!"}</p>
+
+          <Card className="p-8 md:p-12 bg-white border-[#FFD1DC] border-2 rounded-3xl shadow-xl">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F8C8DC] mx-auto mb-4"></div>
+              <p className="text-[#6A6A6A]">Loading...</p>
+            </div>
+          </Card>
+        </div>
+      </section>
+    }>
+      <SmartRSVPContent />
+    </Suspense>
   )
 }
