@@ -70,9 +70,9 @@ export default function EventDetails() {
               <span className="text-4xl">📍</span>
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-[#4A4A4A] mb-2">Location</h3>
-                <p className="text-lg text-[#6A6A6A] mb-4">Thành Nam Quán, 475 Đ. Giải Phóng, Trường Thi, Nam Định</p>
+                <p className="text-lg text-[#6A6A6A] mb-4">Làng cổ Gia Hưng, Tổ 5 Đ. Kênh, Lộc Vượng, Nam Định</p>
                 <div className="w-full h-64 bg-[#FAF0E6] rounded-2xl flex items-center justify-center border-2 border-[#E0E0E0]">
-                  <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3739.057319828723!2d106.1568753752737!3d20.42172228108001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135e7570f452589%3A0x3b61147bea568a47!2zVGjDoG5oIE5hbSBRdcOhbg!5e0!3m2!1sen!2s!4v1759950100065!5m2!1sen!2s" className="border-0 w-full h-full rounded-2xl" loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
+                  <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3738.6615825616427!2d106.16199317527419!3d20.438003081067635!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135e76195126523%3A0x6afedb5562d2ab85!2zTmjDoCBow6BuZyBMw6BuZyBj4buVIEdpYSBIxrBuZw!5e0!3m2!1sen!2s!4v1760520782547!5m2!1sen!2s" className="border-0 w-full h-full rounded-2xl" loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
                 </div>
               </div>
             </div>
